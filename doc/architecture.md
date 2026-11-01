@@ -243,7 +243,7 @@ The principles are `plumbob`'s:
 - **Deterministic and testable.** The state machine is tested in `plumbob`; this crate's
   tests drive it through async I/O, including I/O that actually waits. No hardware is
   required for any test.
-- **Policy at the right layer.** plumbob-async implements the spec, not strategy.
+- **Policy at the right layer.** plumbob-async implements the standard's procedure, not strategy.
 - **No unsafe code.** `#![forbid(unsafe_code)]`.
 - **Type reuse over duplication.** All protocol and training types live in `plumbob` and
   are re-exported here. There is no parallel type hierarchy.
