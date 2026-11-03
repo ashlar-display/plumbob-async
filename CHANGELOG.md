@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-03
+
+### Changed
+
+- **`display-types` requirement widened to `>=0.4.3, <0.6`**, so both 0.4.3 and 0.5 are
+  accepted, as in hdmi-hal. The display-types items plumbob-async uses are the same in both, so this
+  is not a breaking change: an existing dependency on display-types 0.4 keeps resolving, and
+  one on 0.5 now lines up with plumbob-async's.
+
+### Internal
+
+- **Release prep checks semver against the release as built** when the published baseline
+  no longer builds from crates.io (its dependency ranges now resolve to versions it does
+  not compile against): it compares with the release tag built from its own `Cargo.lock`.
+  A semver check that reaches no verdict now stops the job instead of counting as a
+  breaking change, which had turned the display-types widening into a minor bump.
+
 ## [0.3.0] - 2026-10-25
 
 ### Breaking changes
