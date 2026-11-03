@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is not a breaking change: an existing dependency on display-types 0.4 keeps resolving, and
   one on 0.5 now lines up with plumbob-async's.
 
+### Internal
+
+- **Release prep checks semver against the release as built** when the published baseline
+  no longer builds from crates.io (its dependency ranges now resolve to versions it does
+  not compile against): it compares with the release tag built from its own `Cargo.lock`.
+  A semver check that reaches no verdict now stops the job instead of counting as a
+  breaking change, which had turned the display-types widening into a minor bump.
+
 ## [0.3.0] - 2026-10-25
 
 ### Breaking changes
