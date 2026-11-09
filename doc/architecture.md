@@ -9,8 +9,7 @@ async `ScdcClient` and an async `HdmiPhy`, `.await`ing each operation, so traini
 to the executor wherever the I/O waits.
 
 Because there is one state machine, sync and async training behave identically and every
-fix reaches both. The stack design document's "Sync and Async Companions" section records
-why the state machine lives in `plumbob` rather than being copied here.
+fix reaches both.
 
 The crate is suitable for cooperative async runtimes on embedded targets (Embassy) and OS
 targets (Tokio, async-std); it depends on no runtime.
@@ -113,8 +112,7 @@ before, and the orphan rule never let them write a blanket implementation of it.
 This needs plumbob 0.3.1: plumbob 0.2.0 and 0.3.0 held a `Cell` across `.await`s in
 `plumbob::lts::run`, so no training future was `Send`, concrete or not. Return-type
 notation would let callers bound the plain traits' futures instead, and replace the
-twins, once it is stable; the stack design document ("Sync and Async Companions")
-records the decision.
+twins, once it is stable.
 
 ---
 
