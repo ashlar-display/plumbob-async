@@ -62,6 +62,15 @@ The tests check:
 The tests that compare or inspect traces are compiled only with the `alloc` feature. CI
 runs the suite with the `std` feature and again with no features, so it builds in both.
 
+## Builds
+
+CI runs the tests with `std`, with `alloc` only and with no features, on stable and on the
+MSRV, and builds the `alloc`-only and bare configurations for `thumbv7em-none-eabi`, which
+has no `std`. The README's examples compile as doctests: the training examples inside
+hidden generic functions, and the multi-threaded example through a hidden stand-in with
+`tokio::spawn`'s `Send + 'static` bound, so the doctest checks that the `Send` twins'
+training futures can be spawned.
+
 ## Coverage
 
 CI measures line coverage with `cargo-llvm-cov` over the `std` feature set. The baseline

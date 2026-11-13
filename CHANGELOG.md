@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`doc/setup.md` lists the checks CI runs**: clippy and the tests in every feature set,
   rustdoc with every feature and the MSRV check; the coverage tolerance is 0.1 percentage
   points, not 0.1%.
+- **`doc/testing.md` describes the builds** CI runs the tests in, and the README doctests.
 
 ## [0.3.1] - 2026-11-03
 
