@@ -59,7 +59,9 @@ is fine.
 plumbob-async builds on [plumbob](https://github.com/ashlar-display/plumbob) and
 [hdmi-hal-async](https://github.com/ashlar-display/hdmi-hal-async) and re-exports the
 types its API uses (plumbob's protocol, configuration and outcome types, and the async PHY
-traits), so a breaking release of either is a breaking release of plumbob-async. Other
+traits). Their versions are therefore part of plumbob-async's API: moving to a breaking
+release of either is a breaking release of plumbob-async, unless the version requirement
+keeps accepting the old release as well. Other
 [Ashlar crates](https://ashlar-display.org/crates.html) depend on plumbob-async as a
 versioned crate dependency. Changes that add or modify public API must be merged, tagged,
 and published to crates.io before downstream crates can adopt them. The workflow is:
