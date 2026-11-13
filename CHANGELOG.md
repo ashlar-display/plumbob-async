@@ -66,6 +66,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   publishing section on the crates plumbob-async builds on and re-exports.
 - **The README's documentation list links `doc/setup.md`, `doc/roadmap.md` and
   `CONTRIBUTING.md`.**
+- **The docs give the coverage tolerance as 0.1 percentage points everywhere** (as CI
+  checks it, not 0.1%), and `doc/setup.md` installs the cargo-msrv version CI pins
+  (0.19.6).
 
 ## [0.3.1] - 2026-11-03
 

@@ -74,7 +74,7 @@ training futures can be spawned.
 ## Coverage
 
 CI measures line coverage with `cargo-llvm-cov` over the `std` feature set. The baseline
-is stored in `.coverage-baseline`; CI fails if coverage drops more than 0.1% below it.
+is stored in `.coverage-baseline`; CI fails if coverage drops more than 0.1 percentage points below it.
 
 ## Philosophy
 
