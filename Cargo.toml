@@ -24,3 +24,9 @@ display-types = { version = ">=0.4.3, <0.6", default-features = false }
 [dev-dependencies]
 pollster = { version = "0.3", features = ["macro"] }
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(docsrs)"] }
