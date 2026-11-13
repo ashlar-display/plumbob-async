@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Internal
+
+- **The README's Rust examples compile as doctests** (`ReadmeDoctests` in `lib.rs`,
+  compiled only for `cargo test`): the client sketches with hidden types, the training
+  examples inside hidden generic functions, and the multi-threaded example through a hidden
+  stand-in with `tokio::spawn`'s `Send + 'static` bound, so they are checked against the
+  API without a sink. The `select!` sketch is marked `ignore`: it depends on the executor.
+
 ## [0.3.1] - 2026-11-03
 
 ### Changed

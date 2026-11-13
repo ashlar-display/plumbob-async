@@ -46,6 +46,8 @@ use plumbob_async::{
 };
 
 struct MyScdcClient { /* async I²C / DDC transport */ }
+# #[derive(Debug)]
+# struct MyError;
 
 impl ScdcClient for MyScdcClient {
     type Error = MyError;
@@ -66,6 +68,8 @@ Construct an `FrlTrainer` and train over the rates to try, highest first; the si
 requests for a lower rate step down through the list:
 
 ```rust
+# async fn example<S, P>(scdc: S, phy: P) -> Result<(), plumbob_async::TrainingError<S::Error, P::Error>>
+# where S: plumbob_async::ScdcClient, P: plumbob_async::HdmiPhy {
 use plumbob_async::{FrlTrainer, HdmiForumFrl, TrainingConfig, TrainingOutcome};
 
 let mut trainer = FrlTrainer::new(scdc, phy);
@@ -86,6 +90,8 @@ match trained.outcome {
 for warning in trained.iter_warnings() {
     println!("Warning: {warning:?}");
 }
+# Ok(())
+# }
 ```
 
 After `Success`, start video on the PHY the trainer holds —
@@ -112,12 +118,26 @@ longer known to be `Send`:
 
 ```rust
 use plumbob_async::{FrlTrainer, HdmiForumFrl, SendHdmiPhy, SendScdcClient, TrainingConfig};
+# use plumbob_async::{ClearableUpdateFlags, FrlConfig, LtpRequests, SourceTestConfig, UpdateFlags};
+# struct MyThreadSafeScdcClient;
+# #[derive(Debug)]
+# struct MyError;
+# // A stand-in with tokio::spawn's bound: the future must be `Send + 'static`.
+# mod tokio {
+#     pub fn spawn<F: core::future::Future + Send + 'static>(_future: F) {}
+# }
 
 impl SendScdcClient for MyThreadSafeScdcClient {
     type Error = MyError;
 
     async fn read_flt_ready(&mut self) -> Result<bool, MyError> { todo!() }
     // … the other six methods, as for `ScdcClient`
+#     async fn read_update_flags(&mut self) -> Result<UpdateFlags, MyError> { todo!() }
+#     async fn clear_update_flags(&mut self, _: ClearableUpdateFlags) -> Result<(), MyError> { todo!() }
+#     async fn read_ltp_requests(&mut self) -> Result<LtpRequests, MyError> { todo!() }
+#     async fn read_source_test_config(&mut self) -> Result<SourceTestConfig, MyError> { todo!() }
+#     async fn write_config_0_defaults(&mut self) -> Result<(), MyError> { todo!() }
+#     async fn write_frl_config(&mut self, _: FrlConfig) -> Result<(), MyError> { todo!() }
 }
 
 fn spawn_training<C, P>(mut trainer: FrlTrainer<C, P>, rates: &'static [HdmiForumFrl])
@@ -163,7 +183,7 @@ hot-unplug event, or hitting a `timeout` — stops training wherever it is, and 
 future cannot run LTS:L: the sink may be left configured for an FRL rate and the PHY
 driving training patterns. After dropping one, return both ends to TMDS yourself:
 
-```rust
+```rust,ignore
 select! {
     result = trainer.train(&rates, &config) => handle(result),
     _ = hot_unplug.wait() => {
@@ -194,12 +214,19 @@ The trace and its `TrainingEvent`s are plumbob's: a sync trace and an async trac
 same sink are identical.
 
 ```rust
+# #[cfg(feature = "alloc")]
+# async fn example<S: plumbob_async::ScdcClient, P: plumbob_async::HdmiPhy>(
+#     trainer: &mut plumbob_async::FrlTrainer<S, P>,
+#     rates: [plumbob_async::HdmiForumFrl; 3],
+#     config: plumbob_async::TrainingConfig,
+# ) where S::Error: core::fmt::Debug, P::Error: core::fmt::Debug {
 let (result, trace) = trainer.train_traced(&rates, &config).await;
 
 println!("Result: {result:?}");
 for event in &trace.events {
     println!("  {event:?}");
 }
+# }
 ```
 
 Without an allocator, `train_with_events(&rates, &config, &mut |event| …).await` delivers
