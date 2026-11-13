@@ -19,11 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
-- **The README's Rust examples compile as doctests** (`ReadmeDoctests` in `lib.rs`,
-  compiled only for `cargo test`): the client sketches with hidden types, the training
-  examples inside hidden generic functions, and the multi-threaded example through a hidden
-  stand-in with `tokio::spawn`'s `Send + 'static` bound, so they are checked against the
-  API without a sink. The `select!` sketch is marked `ignore`: it depends on the executor.
+- **The README's Rust examples run as doctests** (`ReadmeDoctests` in `lib.rs`, compiled
+  only for `cargo test`): the training examples against a hidden mock sink and PHY under
+  `pollster`, once with a sink that trains and once with one that never reports
+  `FLT_ready`, with hidden asserts on the outcome and the trace; the client sketches with
+  hidden types; the multi-threaded example through a hidden stand-in with
+  `tokio::spawn`'s `Send + 'static` bound, so the doctest checks that `train`'s future can
+  be spawned. The `select!` sketch is marked `ignore`: it depends on the executor.
 - **The published `.crate` holds only what the crate needs**: `include` in `Cargo.toml`
   limits it to the sources, `doc/`, the README, changelog and license; it also shipped the
   CI workflows, Dependabot configuration, coverage baseline, `.gitignore` and

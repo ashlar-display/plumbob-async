@@ -46,9 +46,11 @@ is fine.
 - Write commit messages in the imperative mood ("Add support for …", not "Added …").
 - Keep commits logically atomic. A PR that touches three unrelated things should be three
   commits (or three PRs).
-- Tests are expected for new state machine logic. Use `SimScdc` and `MockPhy` from the
-  sim harness to script the sink's responses and assert on the outcome; see
-  [`doc/testing.md`](doc/testing.md) for the pattern.
+- Tests are expected for new async driver logic (the training state machine itself is
+  plumbob's, and tested there). Use the scripted `Sink` and `Phy` in
+  `src/trainer/tests.rs`, or their `Send` twins `SendSink` and `SendPhy`, to script the
+  sink's responses and assert on the outcome; see [`doc/testing.md`](doc/testing.md) for
+  the pattern.
 - CI must be green before a PR can merge: fmt, clippy, docs, the tests in every feature
   set, the bare-metal `no_std` builds, the same tests and builds on the MSRV (Rust 1.85),
   and coverage must not drop more than 0.1 percentage points below the baseline (stored in
@@ -56,11 +58,13 @@ is fine.
 
 ## Publishing and downstream dependencies
 
-plumbob-async builds on [plumbob](https://github.com/ashlar-display/plumbob) and
-[hdmi-hal-async](https://github.com/ashlar-display/hdmi-hal-async) and re-exports the
-types its API uses (plumbob's protocol, configuration and outcome types, and the async PHY
-traits). Their versions are therefore part of plumbob-async's API: moving to a breaking
-release of either is a breaking release of plumbob-async, unless the version requirement
+plumbob-async builds on [plumbob](https://github.com/ashlar-display/plumbob),
+[hdmi-hal-async](https://github.com/ashlar-display/hdmi-hal-async) and
+[display-types](https://github.com/ashlar-display/display-types) and uses their types in
+its API (plumbob's protocol, configuration and outcome types, the async PHY traits, and
+display-types' `HdmiForumFrl`, which `train` takes). Their versions are therefore part of
+plumbob-async's API: moving to a breaking release of one of them is a breaking release of
+plumbob-async, unless the version requirement
 keeps accepting the old release as well. Other
 [Ashlar crates](https://ashlar-display.org/crates.html) depend on plumbob-async as a
 versioned crate dependency. Changes that add or modify public API must be merged, tagged,
