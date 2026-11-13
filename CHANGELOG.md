@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **docs.rs marks the items that need a feature** (`alloc`) with the `doc_cfg` badge,
+  enabled only in docs.rs builds; docs.rs builds with every feature.
+
+### Changed
+
+- **The README's Ashlar block links the stack's crate list** instead of naming every crate,
+  so it no longer goes stale on crates.io when a crate is added.
+
+### Internal
+
+- **The README's Rust examples run as doctests** (`ReadmeDoctests` in `lib.rs`, compiled
+  only for `cargo test`): the training examples against a hidden mock sink and PHY under
+  `pollster`, once with a sink that trains and once with one that never reports
+  `FLT_ready`, with hidden asserts on the outcome and the trace; the client sketches with
+  hidden types; the multi-threaded example through a hidden stand-in with
+  `tokio::spawn`'s `Send + 'static` bound, so the doctest checks that `train`'s future can
+  be spawned. The `select!` sketch is marked `ignore`: it depends on the executor.
+- **The published `.crate` holds only what the crate needs**: `include` in `Cargo.toml`
+  limits it to the sources, `doc/`, the README, changelog and license; it also shipped the
+  CI workflows, Dependabot configuration, coverage baseline, `.gitignore` and
+  `CONTRIBUTING.md`.
+- **The documentation is built as docs.rs builds it, weekly**: `docs.yml` runs
+  `cargo doc --all-features` with nightly and `--cfg docsrs` (and `-D warnings`), so a
+  nightly change to the `doc_cfg` feature badges shows up before it breaks a docs.rs build.
+- **CI runs with a read-only token by default**: `ci.yml` sets `permissions: contents: read`;
+  the coverage job keeps the write permissions it needs to open its ratchet PR. The test job
+  ran with the repository's default token permissions.
+- **CI's test job does not keep the checkout's git credentials** (`persist-credentials:
+  false`); it never pushes. The coverage job keeps them to push its ratchet branch.
+- **CI fails on a `[patch]` section in `Cargo.toml`**, on `main` and in the publish
+  workflow's `verify` job: `cargo package` drops it, so a release built with one would not
+  build from crates.io.
+- **Clippy lints the tests too, in every feature set** (`--all-targets`, with `std`, with
+  `alloc` only and with no features), in CI and in the publish workflow's `verify` job; it
+  linted only the library, with `std`.
+- **rustdoc runs with every feature and `-D warnings`**, as docs.rs builds, in CI and in
+  the publish workflow's `verify` job: `-D missing_docs` alone let broken intra-doc links
+  through.
+- **The tests run with `alloc` only too**, in CI and in the publish workflow's `verify`
+  job; that build was only compiled.
+- **The MSRV is checked**: an `MSRV` job in CI and in the publish workflow (which waits for
+  it) runs the tests in every feature set and the bare-metal builds on the `rust-version`
+  from `Cargo.toml` (1.85) with `cargo msrv verify`; the crate declared it, and nothing
+  checked it.
+- **The coverage job's cache is keyed on the Rust version** as well as `Cargo.lock`, so a
+  `target/` built by an older Rust is not restored: `cargo llvm-cov clean --workspace`
+  leaves its instrumented binaries behind, and the report would count their lines as
+  uncovered (it did so in other Ashlar crates after the update to Rust 1.100). The
+  coverage run is `--locked`, as the other jobs are.
+- **`doc/setup.md` lists the checks CI runs**: clippy and the tests in every feature set,
+  rustdoc with every feature and the MSRV check; the coverage tolerance is 0.1 percentage
+  points, not 0.1%.
+- **`doc/testing.md` describes the builds** CI runs the tests in, and the README doctests.
+- **`CONTRIBUTING.md` matches the CI checks** (clippy over all targets in every feature set,
+  rustdoc with `-D warnings`, the bare-metal builds, the MSRV, a tolerance of 0.1
+  percentage points), states the provenance rule for claims about HDMI behaviour, and has a
+  publishing section on the crates plumbob-async builds on and re-exports.
+- **The README's documentation list links `doc/setup.md`, `doc/roadmap.md` and
+  `CONTRIBUTING.md`.**
+- **The docs give the coverage tolerance as 0.1 percentage points everywhere** (as CI
+  checks it, not 0.1%), and `doc/setup.md` installs the cargo-msrv version CI pins
+  (0.19.6).
+- **The MSRV job shows why it failed**: `cargo msrv verify` runs without
+  `--output-format minimal`, which printed only `true` or `false` and dropped the compiler
+  error.
+
 ## [0.3.1] - 2026-11-03
 
 ### Changed

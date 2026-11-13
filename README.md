@@ -10,16 +10,7 @@
 
 > **Part of [Ashlar](https://ashlar-display.org)** — a display connection stack in Rust,
 > HDMI 2.1 first: from EDID parsing through mode negotiation to FRL link training.
->
-> [display-types](https://github.com/ashlar-display/display-types) ·
-> [piaf](https://github.com/ashlar-display/piaf) ·
-> [concordance](https://github.com/ashlar-display/concordance) ·
-> [cartouche](https://github.com/ashlar-display/cartouche) ·
-> [culvert](https://github.com/ashlar-display/culvert) ·
-> [plumbob](https://github.com/ashlar-display/plumbob) ·
-> **plumbob-async** ·
-> [hdmi-hal](https://github.com/ashlar-display/hdmi-hal) ·
-> [hdmi-hal-i2c-dev](https://github.com/ashlar-display/hdmi-hal-i2c-dev)
+> See [all crates](https://ashlar-display.org/crates.html).
 
 Async FRL link training state machine for HDMI 2.1.
 
@@ -46,6 +37,8 @@ use plumbob_async::{
 };
 
 struct MyScdcClient { /* async I²C / DDC transport */ }
+# #[derive(Debug)]
+# struct MyError;
 
 impl ScdcClient for MyScdcClient {
     type Error = MyError;
@@ -66,6 +59,50 @@ Construct an `FrlTrainer` and train over the rates to try, highest first; the si
 requests for a lower rate step down through the list:
 
 ```rust
+# use core::convert::Infallible;
+# use plumbob_async::{
+#     ClearableUpdateFlags, EqParams, FrlConfig, FrlOutput, LanePatterns, LtpReq, LtpRequests,
+#     SourceTestConfig, UpdateFlags,
+# };
+# // A sink that trains at the first rate when `ready`, and never reports FLT_ready otherwise.
+# struct Sink { ready: bool, passed: bool }
+# impl plumbob_async::ScdcClient for Sink {
+#     type Error = Infallible;
+#     async fn read_flt_ready(&mut self) -> Result<bool, Infallible> { Ok(self.ready) }
+#     async fn read_update_flags(&mut self) -> Result<UpdateFlags, Infallible> {
+#         // FLT_update until the lanes are trained, then FRL_Start.
+#         Ok(UpdateFlags::new(false, false, false, false, self.passed, !self.passed, false))
+#     }
+#     async fn clear_update_flags(&mut self, _: ClearableUpdateFlags) -> Result<(), Infallible> { Ok(()) }
+#     async fn read_ltp_requests(&mut self) -> Result<LtpRequests, Infallible> {
+#         self.passed = true;
+#         Ok(LtpRequests::new(LtpReq::None, LtpReq::None, LtpReq::None, LtpReq::None))
+#     }
+#     async fn read_source_test_config(&mut self) -> Result<SourceTestConfig, Infallible> {
+#         Ok(SourceTestConfig::default())
+#     }
+#     async fn write_config_0_defaults(&mut self) -> Result<(), Infallible> { Ok(()) }
+#     async fn write_frl_config(&mut self, _: FrlConfig) -> Result<(), Infallible> { Ok(()) }
+# }
+# // A PHY that accepts every call.
+# struct Phy;
+# impl plumbob_async::HdmiPhy for Phy {
+#     type Error = Infallible;
+#     async fn set_frl_rate(&mut self, _: plumbob_async::HdmiForumFrl) -> Result<(), Infallible> { Ok(()) }
+#     async fn send_ltp(&mut self, _: LanePatterns) -> Result<(), Infallible> { Ok(()) }
+#     async fn set_frl_output(&mut self, _: FrlOutput) -> Result<(), Infallible> { Ok(()) }
+#     async fn adjust_equalization(&mut self, _: EqParams) -> Result<(), Infallible> { Ok(()) }
+#     async fn set_scrambling(&mut self, _: bool) -> Result<(), Infallible> { Ok(()) }
+# }
+# fn main() {
+#     // The example runs twice: a ready sink takes the `Success` arm, the other `FallbackRequired`.
+#     for ready in [true, false] {
+#         let trained = pollster::block_on(example(Sink { ready, passed: false }, Phy)).unwrap();
+#         assert_eq!(trained, ready);
+#     }
+# }
+# async fn example<S, P>(scdc: S, phy: P) -> Result<bool, plumbob_async::TrainingError<S::Error, P::Error>>
+# where S: plumbob_async::ScdcClient, P: plumbob_async::HdmiPhy {
 use plumbob_async::{FrlTrainer, HdmiForumFrl, TrainingConfig, TrainingOutcome};
 
 let mut trainer = FrlTrainer::new(scdc, phy);
@@ -86,6 +123,8 @@ match trained.outcome {
 for warning in trained.iter_warnings() {
     println!("Warning: {warning:?}");
 }
+# Ok(matches!(trained.outcome, TrainingOutcome::Success { .. }))
+# }
 ```
 
 After `Success`, start video on the PHY the trainer holds —
@@ -112,12 +151,26 @@ longer known to be `Send`:
 
 ```rust
 use plumbob_async::{FrlTrainer, HdmiForumFrl, SendHdmiPhy, SendScdcClient, TrainingConfig};
+# use plumbob_async::{ClearableUpdateFlags, FrlConfig, LtpRequests, SourceTestConfig, UpdateFlags};
+# struct MyThreadSafeScdcClient;
+# #[derive(Debug)]
+# struct MyError;
+# // A stand-in with tokio::spawn's bound: the future must be `Send + 'static`.
+# mod tokio {
+#     pub fn spawn<F: core::future::Future + Send + 'static>(_future: F) {}
+# }
 
 impl SendScdcClient for MyThreadSafeScdcClient {
     type Error = MyError;
 
     async fn read_flt_ready(&mut self) -> Result<bool, MyError> { todo!() }
     // … the other six methods, as for `ScdcClient`
+#     async fn read_update_flags(&mut self) -> Result<UpdateFlags, MyError> { todo!() }
+#     async fn clear_update_flags(&mut self, _: ClearableUpdateFlags) -> Result<(), MyError> { todo!() }
+#     async fn read_ltp_requests(&mut self) -> Result<LtpRequests, MyError> { todo!() }
+#     async fn read_source_test_config(&mut self) -> Result<SourceTestConfig, MyError> { todo!() }
+#     async fn write_config_0_defaults(&mut self) -> Result<(), MyError> { todo!() }
+#     async fn write_frl_config(&mut self, _: FrlConfig) -> Result<(), MyError> { todo!() }
 }
 
 fn spawn_training<C, P>(mut trainer: FrlTrainer<C, P>, rates: &'static [HdmiForumFrl])
@@ -163,7 +216,7 @@ hot-unplug event, or hitting a `timeout` — stops training wherever it is, and 
 future cannot run LTS:L: the sink may be left configured for an FRL rate and the PHY
 driving training patterns. After dropping one, return both ends to TMDS yourself:
 
-```rust
+```rust,ignore
 select! {
     result = trainer.train(&rates, &config) => handle(result),
     _ = hot_unplug.wait() => {
@@ -194,12 +247,65 @@ The trace and its `TrainingEvent`s are plumbob's: a sync trace and an async trac
 same sink are identical.
 
 ```rust
+# use core::convert::Infallible;
+# use plumbob_async::{
+#     ClearableUpdateFlags, EqParams, FrlConfig, FrlOutput, LanePatterns, LtpReq, LtpRequests,
+#     SourceTestConfig, UpdateFlags,
+# };
+# // A sink that trains at the first rate when `ready`, and never reports FLT_ready otherwise.
+# struct Sink { ready: bool, passed: bool }
+# impl plumbob_async::ScdcClient for Sink {
+#     type Error = Infallible;
+#     async fn read_flt_ready(&mut self) -> Result<bool, Infallible> { Ok(self.ready) }
+#     async fn read_update_flags(&mut self) -> Result<UpdateFlags, Infallible> {
+#         // FLT_update until the lanes are trained, then FRL_Start.
+#         Ok(UpdateFlags::new(false, false, false, false, self.passed, !self.passed, false))
+#     }
+#     async fn clear_update_flags(&mut self, _: ClearableUpdateFlags) -> Result<(), Infallible> { Ok(()) }
+#     async fn read_ltp_requests(&mut self) -> Result<LtpRequests, Infallible> {
+#         self.passed = true;
+#         Ok(LtpRequests::new(LtpReq::None, LtpReq::None, LtpReq::None, LtpReq::None))
+#     }
+#     async fn read_source_test_config(&mut self) -> Result<SourceTestConfig, Infallible> {
+#         Ok(SourceTestConfig::default())
+#     }
+#     async fn write_config_0_defaults(&mut self) -> Result<(), Infallible> { Ok(()) }
+#     async fn write_frl_config(&mut self, _: FrlConfig) -> Result<(), Infallible> { Ok(()) }
+# }
+# // A PHY that accepts every call.
+# struct Phy;
+# impl plumbob_async::HdmiPhy for Phy {
+#     type Error = Infallible;
+#     async fn set_frl_rate(&mut self, _: plumbob_async::HdmiForumFrl) -> Result<(), Infallible> { Ok(()) }
+#     async fn send_ltp(&mut self, _: LanePatterns) -> Result<(), Infallible> { Ok(()) }
+#     async fn set_frl_output(&mut self, _: FrlOutput) -> Result<(), Infallible> { Ok(()) }
+#     async fn adjust_equalization(&mut self, _: EqParams) -> Result<(), Infallible> { Ok(()) }
+#     async fn set_scrambling(&mut self, _: bool) -> Result<(), Infallible> { Ok(()) }
+# }
+# #[cfg(not(feature = "alloc"))]
+# fn main() {}
+# #[cfg(feature = "alloc")]
+# fn main() {
+#     use plumbob_async::HdmiForumFrl::{Rate10Gbps4Lanes, Rate12Gbps4Lanes, Rate6Gbps4Lanes};
+#     let mut trainer = plumbob_async::FrlTrainer::new(Sink { ready: true, passed: false }, Phy);
+#     let rates = [Rate12Gbps4Lanes, Rate10Gbps4Lanes, Rate6Gbps4Lanes];
+#     let (ok, events) = pollster::block_on(example(&mut trainer, rates, Default::default()));
+#     assert!(ok && events > 0);
+# }
+# #[cfg(feature = "alloc")]
+# async fn example<S: plumbob_async::ScdcClient, P: plumbob_async::HdmiPhy>(
+#     trainer: &mut plumbob_async::FrlTrainer<S, P>,
+#     rates: [plumbob_async::HdmiForumFrl; 3],
+#     config: plumbob_async::TrainingConfig,
+# ) -> (bool, usize) where S::Error: core::fmt::Debug, P::Error: core::fmt::Debug {
 let (result, trace) = trainer.train_traced(&rates, &config).await;
 
 println!("Result: {result:?}");
 for event in &trace.events {
     println!("  {event:?}");
 }
+# (result.is_ok(), trace.events.len())
+# }
 ```
 
 Without an allocator, `train_with_events(&rates, &config, &mut |event| …).await` delivers
@@ -278,6 +384,10 @@ or runtime crate.
   trainer, and design principles
 - [`doc/model.md`](doc/model.md) — the re-exported types and the culvert-async boundary
 - [`doc/testing.md`](doc/testing.md) — what the async driver's tests cover
+- [`doc/setup.md`](doc/setup.md) — build, test, `no_std`, MSRV and coverage commands
+- [`doc/roadmap.md`](doc/roadmap.md) — what comes next
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to contribute, and how releases reach the
+  crates that depend on plumbob-async
 
 ## Verifying releases
 
