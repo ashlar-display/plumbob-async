@@ -296,6 +296,10 @@ or runtime crate.
   trainer, and design principles
 - [`doc/model.md`](doc/model.md) — the re-exported types and the culvert-async boundary
 - [`doc/testing.md`](doc/testing.md) — what the async driver's tests cover
+- [`doc/setup.md`](doc/setup.md) — build, test, `no_std`, MSRV and coverage commands
+- [`doc/roadmap.md`](doc/roadmap.md) — what comes next
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to contribute, and how releases reach the
+  crates that depend on plumbob-async
 
 ## Verifying releases
 
