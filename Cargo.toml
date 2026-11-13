@@ -10,6 +10,7 @@ repository = "https://github.com/ashlar-display/plumbob-async"
 homepage = "https://ashlar-display.org"
 keywords = ["ashlar", "hdmi", "no-std", "link-training", "async"]
 categories = ["asynchronous", "hardware-support", "embedded", "no-std", "no-std::no-alloc"]
+include = ["src/**", "doc/**", "README.md", "CHANGELOG.md", "LICENSE"]
 
 [features]
 alloc = ["plumbob/alloc"]
@@ -22,3 +23,4 @@ display-types = { version = ">=0.4.3, <0.6", default-features = false }
 
 [dev-dependencies]
 pollster = { version = "0.3", features = ["macro"] }
+
