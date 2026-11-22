@@ -26,11 +26,17 @@ is fine.
 
 ## Coding standards
 
-- Run `cargo fmt` and `cargo clippy -- -D warnings` before pushing.
-- Public items need rustdoc comments (`cargo rustdoc -- -D missing_docs` must pass).
+- Run `cargo fmt` and `cargo clippy --all-targets --features std -- -D warnings` before
+  pushing; CI runs clippy in every feature set ([doc/setup.md](doc/setup.md) lists the
+  commands).
+- Public items need rustdoc comments, and intra-doc links must resolve
+  (`cargo rustdoc --all-features -- -D warnings` must pass).
 - Follow the existing patterns in the codebase — see [`doc/architecture.md`](doc/architecture.md)
   and [`doc/model.md`](doc/model.md) for the design principles behind them.
 - `#![forbid(unsafe_code)]` is enforced; no unsafe code.
+- A claim about HDMI behaviour (a rule, a default, a threshold, a register encoding) cites
+  at least two independent public implementations (repository, commit, file and line).
+  Where implementations differ, the behaviour is a setting with the majority as default.
 - Keep `no_std` compatibility. `ScdcClient` and `FrlTrainer` must compile without
   `alloc` or `std`; the owned protocol types are defined in `plumbob` and are already
   guaranteed `no_std` there.
@@ -40,12 +46,33 @@ is fine.
 - Write commit messages in the imperative mood ("Add support for …", not "Added …").
 - Keep commits logically atomic. A PR that touches three unrelated things should be three
   commits (or three PRs).
-- Tests are expected for new state machine logic. Use `SimScdc` and `MockPhy` from the
-  sim harness to script the sink's responses and assert on the outcome; see
-  [`doc/testing.md`](doc/testing.md) for the pattern.
-- CI must be green before a PR can merge: fmt, clippy, docs, all test and build targets,
-  and coverage must not drop more than 0.1% below the baseline (stored in
+- Tests are expected for new async driver logic (the training state machine itself is
+  plumbob's, and tested there). Use the scripted `Sink` and `Phy` in
+  `src/trainer/tests.rs`, or their `Send` twins `SendSink` and `SendPhy`, to script the
+  sink's responses and assert on the outcome; see [`doc/testing.md`](doc/testing.md) for
+  the pattern.
+- CI must be green before a PR can merge: fmt, clippy, docs, the tests in every feature
+  set, the bare-metal `no_std` builds, the same tests and builds on the MSRV (Rust 1.85),
+  and coverage must not drop more than 0.1 percentage points below the baseline (stored in
   `.coverage-baseline`). New logic without tests will likely trip this.
+
+## Publishing and downstream dependencies
+
+plumbob-async builds on [plumbob](https://github.com/ashlar-display/plumbob),
+[hdmi-hal-async](https://github.com/ashlar-display/hdmi-hal-async) and
+[display-types](https://github.com/ashlar-display/display-types) and uses their types in
+its API (plumbob's protocol, configuration and outcome types, the async PHY traits, and
+display-types' `HdmiForumFrl`, which `train` takes). Their versions are therefore part of
+plumbob-async's API: moving to a breaking release of one of them is a breaking release of
+plumbob-async, unless the version requirement
+keeps accepting the old release as well. Other
+[Ashlar crates](https://ashlar-display.org/crates.html) depend on plumbob-async as a
+versioned crate dependency. Changes that add or modify public API must be merged, tagged,
+and published to crates.io before downstream crates can adopt them. The workflow is:
+
+1. Merge and tag a release in this repo (`vX.Y.Z`).
+2. The publish CI workflow uploads the new version to crates.io.
+3. Update the version constraint in the downstream crate's `Cargo.toml`.
 
 ## Review process
 

@@ -5,12 +5,11 @@
 `plumbob-async` is the async companion to `plumbob`: FRL link training for async SCDC and
 PHY implementations. It does not have a training state machine of its own. It runs
 plumbob's — [`plumbob::lts::run`], an `async fn` that performs no I/O itself — over an
-async `ScdcClient` and an async `HdmiPhy`, `.await`ing each operation, so training yields
+async `ScdcClient` and an async `FrlPhy`, `.await`ing each operation, so training yields
 to the executor wherever the I/O waits.
 
 Because there is one state machine, sync and async training behave identically and every
-fix reaches both. The stack design document's "Sync and Async Companions" section records
-why the state machine lives in `plumbob` rather than being copied here.
+fix reaches both.
 
 The crate is suitable for cooperative async runtimes on embedded targets (Embassy) and OS
 targets (Tokio, async-std); it depends on no runtime.
@@ -23,7 +22,7 @@ plumbob-async covers:
 
 - `ScdcClient`: the async typed SCDC interface trait, the counterpart of
   `plumbob::ScdcClient`, and its `Send` twin `SendScdcClient`,
-- `FrlTrainer<C, P>`: owns an async `ScdcClient` and an async `HdmiPhy` and runs
+- `FrlTrainer<C, P>`: owns an async `ScdcClient` and an async `FrlPhy` and runs
   `plumbob::lts::run` over them (`train`, `train_at_rate`, their traced forms and
   `train_with_events`), and runs LTS:L on its own (`exit_to_tmds`),
 - re-exports of the shared protocol and training types from `plumbob`.
@@ -36,7 +35,7 @@ The following are out of scope:
   to do with a `FallbackRequired`.
 - **SCDC register decoding** — plumbob-async reads typed values from `ScdcClient` and
   does not decode raw register bytes.
-- **PHY vendor sequences** — plumbob-async calls `HdmiPhy` methods; the register sequences
+- **PHY vendor sequences** — plumbob-async calls `FrlPhy` methods; the register sequences
   are in platform PHY backends.
 - **Timing** — the poll limits in `TrainingConfig` assume one poll every 2 ms by default.
   The interval belongs inside the polled `ScdcClient` methods, where an async
@@ -56,7 +55,7 @@ plumbob          ─┴───────────────────
 ```
 
 - `plumbob` — the state machine (`plumbob::lts`) and all shared types, re-exported here
-- `hdmi-hal-async` — the async `HdmiPhy` and the `hdmi-hal` data types it re-exports
+- `hdmi-hal-async` — the async `FrlPhy` and the `hdmi-hal` data types it re-exports
 - `display-types` — `HdmiForumFrl`
 
 `culvert-async` implements `plumbob_async::ScdcClient` for its `Scdc<T>` behind a
@@ -90,12 +89,12 @@ accept.
 
 ### `Send` futures: `SendScdcClient`
 
-With concrete `ScdcClient` and `HdmiPhy` types whose futures and error types are `Send`,
+With concrete `ScdcClient` and `FrlPhy` types whose futures and error types are `Send`,
 the `train` future is `Send` and can be spawned on a multi-threaded runtime
 (`train_with_events` also needs a `Send` callback). Code generic over the
 plain traits cannot spawn it, whatever it bounds the types by: an `async fn` in a trait
 promises nothing about its future. For that code, `SendScdcClient` is `ScdcClient`'s
-`Send` twin, as `SendHdmiPhy` (re-exported from hdmi-hal-async) is `HdmiPhy`'s: the same
+`Send` twin, as `SendFrlPhy` (re-exported from hdmi-hal-async) is `FrlPhy`'s: the same
 methods, each returning a future that is `Send`, a `Send` error, and `Send` as a
 supertrait, since the futures borrow the client mutably. A blanket implementation makes
 every `SendScdcClient` an `ScdcClient`, so `FrlTrainer` takes either; with both twins,
@@ -103,7 +102,7 @@ the futures of every training method and of `exit_to_tmds` are `Send` in generic
 A test checks this at compile time, generic over the twins. The code must be bounded by
 the twins alone: with `C: SendScdcClient + ScdcClient` the compiler uses the explicit
 `ScdcClient` bound rather than the blanket implementation, and the futures are opaque
-again (not known to be `Send`); likewise `+ HdmiPhy`.
+again (not known to be `Send`); likewise `+ FrlPhy`.
 
 The blanket implementation costs this crate one option: it cannot add forwarding
 implementations of `ScdcClient` (for `&mut C` or `Box<C>`), which would overlap with it
@@ -113,15 +112,14 @@ before, and the orphan rule never let them write a blanket implementation of it.
 This needs plumbob 0.3.1: plumbob 0.2.0 and 0.3.0 held a `Cell` across `.await`s in
 `plumbob::lts::run`, so no training future was `Send`, concrete or not. Return-type
 notation would let callers bound the plain traits' futures instead, and replace the
-twins, once it is stable; the stack design document ("Sync and Async Companions")
-records the decision.
+twins, once it is stable.
 
 ---
 
 ## `FrlTrainer<C, P>`
 
 ```rust
-impl<C: ScdcClient, P: HdmiPhy> FrlTrainer<C, P> {
+impl<C: ScdcClient, P: FrlPhy> FrlTrainer<C, P> {
     pub fn new(scdc: C, phy: P) -> Self;
     pub fn into_parts(self) -> (C, P);
     pub fn scdc(&self) -> &C;
@@ -147,11 +145,11 @@ impl<C: ScdcClient, P: HdmiPhy> FrlTrainer<C, P> {
 }
 ```
 
-`HdmiPhy` is `hdmi_hal_async::phy::HdmiPhy`. The API matches `plumbob::FrlTrainer`, with
+`FrlPhy` is `hdmi_hal_async::phy::FrlPhy`. The API matches `plumbob::FrlTrainer`, with
 the training methods `async`.
 
 Each training method runs `plumbob::lts::run` over a private adapter that implements
-`plumbob::lts::TrainingIo` by `.await`ing the trainer's `ScdcClient` and `HdmiPhy`. The
+`plumbob::lts::TrainingIo` by `.await`ing the trainer's `ScdcClient` and `FrlPhy`. The
 outcomes, errors and `TrainingEvent`s are therefore exactly plumbob's: a sync trace and an
 async trace of the same sink are identical. `exit_to_tmds` runs `plumbob::lts::exit_to_tmds`
 over the same adapter.

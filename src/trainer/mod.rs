@@ -1,5 +1,5 @@
 use display_types::cea861::hdmi_forum::HdmiForumFrl;
-use hdmi_hal_async::phy::HdmiPhy;
+use hdmi_hal_async::phy::FrlPhy;
 use hdmi_hal_async::{EqParams, FrlOutput, LanePatterns};
 use plumbob::ClearableUpdateFlags;
 use plumbob::lts::{self, TrainingIo};
@@ -16,9 +16,9 @@ use crate::{
 #[cfg(feature = "alloc")]
 use crate::TrainingTrace;
 
-type Error<C, P> = TrainingError<<C as ScdcClient>::Error, <P as HdmiPhy>::Error>;
+type Error<C, P> = TrainingError<<C as ScdcClient>::Error, <P as FrlPhy>::Error>;
 
-/// The central async training type. Owns an async `ScdcClient` and an async `HdmiPhy`.
+/// The central async training type. Owns an async `ScdcClient` and an async `FrlPhy`.
 ///
 /// The async counterpart to [`plumbob::FrlTrainer`]: it runs plumbob's state machine,
 /// [`plumbob::lts::run`], awaiting each SCDC and PHY operation, so it yields to the
@@ -31,14 +31,14 @@ type Error<C, P> = TrainingError<<C as ScdcClient>::Error, <P as HdmiPhy>::Error
 /// a hot-unplug, a `timeout` — stops training wherever it is: the sink may be configured
 /// for an FRL rate and the PHY driving training patterns, and no LTS:L runs, since a
 /// future cannot await anything once dropped. Call [`exit_to_tmds`](Self::exit_to_tmds)
-/// afterwards to return both ends to TMDS. Bounding training is better left to the poll
+/// afterwards to turn FRL off at both ends. Bounding training is better left to the poll
 /// limits in [`TrainingConfig`], which end every attempt in a defined state.
 pub struct FrlTrainer<C, P> {
     scdc: C,
     phy: P,
 }
 
-impl<C: ScdcClient, P: HdmiPhy> FrlTrainer<C, P> {
+impl<C: ScdcClient, P: FrlPhy> FrlTrainer<C, P> {
     /// Constructs a new `FrlTrainer` owning the given async SCDC client and PHY.
     pub fn new(scdc: C, phy: P) -> Self {
         Self { scdc, phy }
@@ -70,8 +70,10 @@ impl<C: ScdcClient, P: HdmiPhy> FrlTrainer<C, P> {
         &mut self.phy
     }
 
-    /// LTS:L on demand: stops the training patterns, returns the PHY to TMDS, turns FRL
-    /// off in `Config_1` and clears `FLT_update` if it is set.
+    /// LTS:L on demand: stops the training patterns, turns the PHY's FRL off (entering no
+    /// other mode; entering TMDS is the TMDS bring-up's, through hdmi-hal-async's
+    /// `TmdsPhy`), turns FRL off in `Config_1`, which returns the sink to TMDS, and clears
+    /// `FLT_update` if it is set.
     ///
     /// The async counterpart to [`plumbob::FrlTrainer::exit_to_tmds`]: for taking an FRL
     /// link down when the display is disabled or unplugged, before a mode change, after
@@ -154,13 +156,13 @@ impl<C: ScdcClient, P: HdmiPhy> FrlTrainer<C, P> {
     }
 }
 
-/// [`TrainingIo`] over an async `ScdcClient` and `HdmiPhy`.
+/// [`TrainingIo`] over an async `ScdcClient` and `FrlPhy`.
 struct AsyncIo<'a, C, P> {
     scdc: &'a mut C,
     phy: &'a mut P,
 }
 
-impl<C: ScdcClient, P: HdmiPhy> TrainingIo for AsyncIo<'_, C, P> {
+impl<C: ScdcClient, P: FrlPhy> TrainingIo for AsyncIo<'_, C, P> {
     type ScdcError = C::Error;
     type PhyError = P::Error;
 
