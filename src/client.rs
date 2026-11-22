@@ -62,14 +62,14 @@ pub trait ScdcClient {
 /// trait has the same methods and contract, each returning a future that is `Send`, and
 /// errors that are `Send` too: a spawned task returns them. Implementations still write
 /// `async fn`; the compiler checks that each future is `Send`. With a `SendScdcClient` and
-/// an `hdmi_hal_async::phy::SendHdmiPhy`, the futures of `FrlTrainer`'s training methods
+/// an `hdmi_hal_async::phy::SendFrlPhy`, the futures of `FrlTrainer`'s training methods
 /// and `exit_to_tmds` are `Send` in generic code too (`train_with_events` given a `Send`
 /// callback).
 ///
 /// Bound generic code by `SendScdcClient` alone. Adding `+ ScdcClient`, which it implies
 /// anyway, makes the compiler use that bound instead of the blanket implementation, and
-/// the futures are no longer known to be `Send`; the same holds for `SendHdmiPhy` and
-/// `+ HdmiPhy`.
+/// the futures are no longer known to be `Send`; the same holds for `SendFrlPhy` and
+/// `+ FrlPhy`.
 ///
 /// Every `SendScdcClient` is an `ScdcClient`, through a blanket implementation, so it
 /// works with everything written against `ScdcClient` as well; a type implements one of

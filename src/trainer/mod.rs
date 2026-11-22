@@ -1,5 +1,5 @@
 use display_types::cea861::hdmi_forum::HdmiForumFrl;
-use hdmi_hal_async::phy::HdmiPhy;
+use hdmi_hal_async::phy::FrlPhy;
 use hdmi_hal_async::{EqParams, FrlOutput, LanePatterns};
 use plumbob::ClearableUpdateFlags;
 use plumbob::lts::{self, TrainingIo};
@@ -16,9 +16,9 @@ use crate::{
 #[cfg(feature = "alloc")]
 use crate::TrainingTrace;
 
-type Error<C, P> = TrainingError<<C as ScdcClient>::Error, <P as HdmiPhy>::Error>;
+type Error<C, P> = TrainingError<<C as ScdcClient>::Error, <P as FrlPhy>::Error>;
 
-/// The central async training type. Owns an async `ScdcClient` and an async `HdmiPhy`.
+/// The central async training type. Owns an async `ScdcClient` and an async `FrlPhy`.
 ///
 /// The async counterpart to [`plumbob::FrlTrainer`]: it runs plumbob's state machine,
 /// [`plumbob::lts::run`], awaiting each SCDC and PHY operation, so it yields to the
@@ -38,7 +38,7 @@ pub struct FrlTrainer<C, P> {
     phy: P,
 }
 
-impl<C: ScdcClient, P: HdmiPhy> FrlTrainer<C, P> {
+impl<C: ScdcClient, P: FrlPhy> FrlTrainer<C, P> {
     /// Constructs a new `FrlTrainer` owning the given async SCDC client and PHY.
     pub fn new(scdc: C, phy: P) -> Self {
         Self { scdc, phy }
@@ -154,13 +154,13 @@ impl<C: ScdcClient, P: HdmiPhy> FrlTrainer<C, P> {
     }
 }
 
-/// [`TrainingIo`] over an async `ScdcClient` and `HdmiPhy`.
+/// [`TrainingIo`] over an async `ScdcClient` and `FrlPhy`.
 struct AsyncIo<'a, C, P> {
     scdc: &'a mut C,
     phy: &'a mut P,
 }
 
-impl<C: ScdcClient, P: HdmiPhy> TrainingIo for AsyncIo<'_, C, P> {
+impl<C: ScdcClient, P: FrlPhy> TrainingIo for AsyncIo<'_, C, P> {
     type ScdcError = C::Error;
     type PhyError = P::Error;
 

@@ -14,7 +14,7 @@ use hdmi_hal_async::LtpPattern;
 
 use super::*;
 use crate::{
-    FallbackReason, FfeLevels, LtpReq, SendHdmiPhy, SendScdcClient, TrainingOutcome,
+    FallbackReason, FfeLevels, LtpReq, SendFrlPhy, SendScdcClient, TrainingOutcome,
     TrainingWarning, TxFfeRestrictions,
 };
 
@@ -185,7 +185,7 @@ struct Phy {
     fail: Option<&'static str>,
 }
 
-impl HdmiPhy for Phy {
+impl FrlPhy for Phy {
     type Error = &'static str;
 
     async fn set_frl_rate(&mut self, rate: HdmiForumFrl) -> Result<(), &'static str> {
@@ -210,10 +210,6 @@ impl HdmiPhy for Phy {
         operation(self.waits, self.fail, "adjust_equalization").await?;
         self.equalization.push(params);
         Ok(())
-    }
-
-    async fn set_scrambling(&mut self, _enabled: bool) -> Result<(), &'static str> {
-        operation(self.waits, self.fail, "set_scrambling").await
     }
 }
 
@@ -432,7 +428,6 @@ async fn the_test_doubles_answer_the_operations_training_does_not_use() {
     // Covers the trait methods the state machine never calls.
     let mut sink = Sink::default();
     assert!(sink.read_source_test_config().await.is_ok());
-    assert!(Phy::default().set_scrambling(true).await.is_ok());
 }
 
 #[pollster::test]
@@ -618,27 +613,23 @@ impl SendScdcClient for SendSink {
 /// `Phy` behind hdmi-hal-async's `Send` twin.
 struct SendPhy(Phy);
 
-impl SendHdmiPhy for SendPhy {
+impl SendFrlPhy for SendPhy {
     type Error = &'static str;
 
     async fn set_frl_rate(&mut self, rate: HdmiForumFrl) -> Result<(), &'static str> {
-        HdmiPhy::set_frl_rate(&mut self.0, rate).await
+        FrlPhy::set_frl_rate(&mut self.0, rate).await
     }
 
     async fn send_ltp(&mut self, patterns: LanePatterns) -> Result<(), &'static str> {
-        HdmiPhy::send_ltp(&mut self.0, patterns).await
+        FrlPhy::send_ltp(&mut self.0, patterns).await
     }
 
     async fn set_frl_output(&mut self, output: FrlOutput) -> Result<(), &'static str> {
-        HdmiPhy::set_frl_output(&mut self.0, output).await
+        FrlPhy::set_frl_output(&mut self.0, output).await
     }
 
     async fn adjust_equalization(&mut self, params: EqParams) -> Result<(), &'static str> {
-        HdmiPhy::adjust_equalization(&mut self.0, params).await
-    }
-
-    async fn set_scrambling(&mut self, enabled: bool) -> Result<(), &'static str> {
-        HdmiPhy::set_scrambling(&mut self.0, enabled).await
+        FrlPhy::adjust_equalization(&mut self.0, params).await
     }
 }
 
@@ -649,7 +640,7 @@ type SendResults<C, P> = (
 );
 
 /// Trains, exits, trains again with events and, with `alloc`, traced.
-async fn train_exit_train<C: ScdcClient, P: HdmiPhy>(
+async fn train_exit_train<C: ScdcClient, P: FrlPhy>(
     trainer: &mut FrlTrainer<C, P>,
     config: &TrainingConfig,
     events: &mut usize,
@@ -670,7 +661,7 @@ async fn train_exit_train<C: ScdcClient, P: HdmiPhy>(
 /// [`train_exit_train`] generic over the `Send` twins, as a future that must be `Send`:
 /// this compiles only if every training future is `Send` in generic code, so it could be
 /// spawned on a multi-threaded executor.
-fn spawnable<'a, C: SendScdcClient, P: SendHdmiPhy>(
+fn spawnable<'a, C: SendScdcClient, P: SendFrlPhy>(
     trainer: &'a mut FrlTrainer<C, P>,
     config: &'a TrainingConfig,
     events: &'a mut usize,
@@ -700,14 +691,11 @@ async fn the_send_twins_train_in_generic_send_code() {
     assert_eq!(exit, Ok(()));
     assert!(with_events.is_ok());
     assert!(events > 0);
-    // The operation training does not use, through the blanket implementation.
-    let (_, mut phy) = trainer.into_parts();
-    assert_eq!(HdmiPhy::set_scrambling(&mut phy, true).await, Ok(()));
 }
 
 /// Runs `trainer` with events over the default config, and returns the result, the
 /// events and both ends.
-async fn run_with_events<C: ScdcClient, P: HdmiPhy>(
+async fn run_with_events<C: ScdcClient, P: FrlPhy>(
     mut trainer: FrlTrainer<C, P>,
 ) -> (
     Result<Trained, TrainingError<C::Error, P::Error>>,
