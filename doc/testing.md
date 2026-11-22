@@ -25,8 +25,8 @@ The library itself imposes no executor constraint. Any runtime that can drive an
   one operation, and make every operation wait. It records the flags it is asked to clear,
   its `Config_0` writes and the `FrlConfig`s written.
 - `SendSink` and `SendPhy` — the same doubles behind the `Send` twins, `SendScdcClient`
-  and `SendHdmiPhy`.
-- `Phy` — an async `HdmiPhy` that records the rates, patterns, output modes and
+  and `SendFrlPhy`.
+- `Phy` — an async `FrlPhy` that records the rates, patterns, output modes and
   equalization it is given, with the same failure and waiting options.
 - Waiting is real: `WaitOnce` is a future that returns `Pending` once and wakes itself
   before completing, so the executor has to poll the training future again.
@@ -40,13 +40,13 @@ The tests check:
   (requires `alloc`)
 - A `Source_Test_Update` during LTS:3: the new register read, the flag cleared, and the
   new `TxFfeRestrictions` sent to the PHY with the lanes' levels
-- A fallback returning the PHY to TMDS
+- A fallback turning the PHY's FRL off
 - `TrainingError::Scdc` and `TrainingError::Phy` carrying the error from every SCDC and
   PHY operation the state machine uses
 - The traced methods recording the rates, the config and the events (requires `alloc`)
 - `train_with_events` reporting each event as it occurs over waiting I/O, without `alloc`
 - **The `Send` twins in generic code**: a function generic over `SendScdcClient` and
-  `SendHdmiPhy` must return a `Send` future that trains, runs `exit_to_tmds`, trains with
+  `SendFrlPhy` must return a `Send` future that trains, runs `exit_to_tmds`, trains with
   events and (with `alloc`) traced; it compiles only if all of them are `Send`, and it runs
   over a sink that waits
 - **The twin forwards every operation unchanged**: the same scripted sink through the
@@ -81,7 +81,7 @@ is stored in `.coverage-baseline`; CI fails if coverage drops more than 0.1 perc
 
 ## Philosophy
 
-The state machine runs identically against simulated and real `ScdcClient` / `HdmiPhy`
+The state machine runs identically against simulated and real `ScdcClient` / `FrlPhy`
 implementations, and identically sync and async, because it is the same function. Tests
 of training behaviour belong in `plumbob`; tests here cover the async driver. Hardware is
 never a test dependency.

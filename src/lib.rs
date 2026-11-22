@@ -2,12 +2,12 @@
 //!
 //! `plumbob-async` is the async companion to [`plumbob`]. Its [`FrlTrainer`] runs
 //! plumbob's state machine, [`plumbob::lts::run`], over an async [`ScdcClient`] and an
-//! async `HdmiPhy`, so sync and async training are the same procedure. All shared
+//! async `FrlPhy`, so sync and async training are the same procedure. All shared
 //! protocol and training types are re-exported from `plumbob`.
 //!
 //! The futures of the plain traits are not required to be `Send`. To spawn training on a
 //! multi-threaded executor from code generic over the client and PHY, implement their
-//! `Send` twins, [`SendScdcClient`] and [`SendHdmiPhy`]; every twin is also an
+//! `Send` twins, [`SendScdcClient`] and [`SendFrlPhy`]; every twin is also an
 //! implementation of the plain trait.
 //!
 //! # Features
@@ -44,7 +44,7 @@ pub use plumbob::TrainingTrace;
 // re-exported from `hdmi-hal-async` so that callers and PHY implementations use the same
 // versions plumbob-async does without depending on that crate themselves. A plain comment:
 // a doc comment here would head the inlined documentation of every item re-exported.
-pub use hdmi_hal_async::phy::{HdmiPhy, SendHdmiPhy};
+pub use hdmi_hal_async::phy::{FrlPhy, SendFrlPhy};
 pub use hdmi_hal_async::{
     EqParams, FrlOutput, HdmiForumFrl, LaneEqParams, LanePatterns, LtpPattern, TxFfeLevel,
     TxFfeRestrictions,
