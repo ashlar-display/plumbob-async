@@ -17,18 +17,12 @@ alloc = ["plumbob/alloc"]
 std = ["alloc", "plumbob/std"]
 
 [dependencies]
-plumbob = { version = "0.4", default-features = false }
+plumbob = { version = "0.5", default-features = false }
 hdmi-hal-async = { version = "0.4", default-features = false }
 display-types = { version = ">=0.4.3, <0.6", default-features = false }
 
 [dev-dependencies]
 pollster = { version = "0.3", features = ["macro"] }
-
-# Prototype against plumbob's unreleased breaking release: a pushed commit of its
-# feat/frl-phy branch, on hdmi-hal 0.7, moved by hand; the same commit culvert's branch
-# pins, so a graph with both has one plumbob. Removed when it is released.
-[patch.crates-io]
-plumbob = { git = "https://github.com/ashlar-display/plumbob", rev = "2e244830b850eb27167e58d00b4814ac4fc0e1af" }
 
 [package.metadata.docs.rs]
 all-features = true

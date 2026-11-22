@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking changes
 
-- **Requires hdmi-hal-async 0.4 and plumbob's breaking release**, both on hdmi-hal 0.7:
+- **Requires hdmi-hal-async 0.4 and plumbob 0.5**, both on hdmi-hal 0.7:
   the PHY trait and the types this crate re-exports and drives are theirs.
 - **Requires hdmi-hal-async's PHY traits by link mode.** The PHY trait plumbob-async drives
   is `FrlPhy`, hdmi-hal-async's new name for `HdmiPhy`, and its `Send` twin `SendFrlPhy`
