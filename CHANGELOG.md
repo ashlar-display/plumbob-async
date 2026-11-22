@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+- **Requires hdmi-hal-async 0.4 and plumbob's breaking release**, both on hdmi-hal 0.7:
+  the PHY trait and the types this crate re-exports and drives are theirs.
+- **Requires hdmi-hal-async's PHY traits by link mode.** The PHY trait plumbob-async drives
+  is `FrlPhy`, hdmi-hal-async's new name for `HdmiPhy`, and its `Send` twin `SendFrlPhy`
+  (was `SendHdmiPhy`), both re-exported under those names; there is no alias.
+  Implementations rename the traits; `set_scrambling` is no longer part of them (it is
+  `TmdsPhy`'s, which plumbob-async does not use), and `FrlPhy::Error` is bounded by
+  `core::fmt::Debug`.
+- **LTS:L turns the PHY's FRL off instead of returning it to TMDS.** It still calls
+  `set_frl_rate(HdmiForumFrl::NotSupported)`, which now means "FRL off" and enters no other
+  mode; the sink is back in TMDS as before. A caller that continues in TMDS enters it at the
+  source through hdmi-hal-async's `TmdsPhy`.
+
 ### Added
 
 - **docs.rs marks the items that need a feature** (`alloc`) with the `doc_cfg` badge,

@@ -31,7 +31,7 @@ type Error<C, P> = TrainingError<<C as ScdcClient>::Error, <P as FrlPhy>::Error>
 /// a hot-unplug, a `timeout` — stops training wherever it is: the sink may be configured
 /// for an FRL rate and the PHY driving training patterns, and no LTS:L runs, since a
 /// future cannot await anything once dropped. Call [`exit_to_tmds`](Self::exit_to_tmds)
-/// afterwards to return both ends to TMDS. Bounding training is better left to the poll
+/// afterwards to turn FRL off at both ends. Bounding training is better left to the poll
 /// limits in [`TrainingConfig`], which end every attempt in a defined state.
 pub struct FrlTrainer<C, P> {
     scdc: C,
@@ -70,8 +70,10 @@ impl<C: ScdcClient, P: FrlPhy> FrlTrainer<C, P> {
         &mut self.phy
     }
 
-    /// LTS:L on demand: stops the training patterns, returns the PHY to TMDS, turns FRL
-    /// off in `Config_1` and clears `FLT_update` if it is set.
+    /// LTS:L on demand: stops the training patterns, turns the PHY's FRL off (entering no
+    /// other mode; entering TMDS is the TMDS bring-up's, through hdmi-hal-async's
+    /// `TmdsPhy`), turns FRL off in `Config_1`, which returns the sink to TMDS, and clears
+    /// `FLT_update` if it is set.
     ///
     /// The async counterpart to [`plumbob::FrlTrainer::exit_to_tmds`]: for taking an FRL
     /// link down when the display is disabled or unplugged, before a mode change, after

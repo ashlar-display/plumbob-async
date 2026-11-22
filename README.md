@@ -195,7 +195,7 @@ and error types are.
 ## Training procedure
 
 The procedure is plumbob's — LTS:2 (prepare), LTS:3 (train), LTS:P (pass), with LTS:4
-(lower rate) on the sink's request and LTS:L (exit to TMDS) before every
+(lower rate) on the sink's request and LTS:L (FRL off at both ends) before every
 `FallbackRequired` and after an I/O error — because it is plumbob's code: `FrlTrainer` runs `plumbob::lts::run`
 over its async SCDC client and PHY. See
 [plumbob's README](https://github.com/ashlar-display/plumbob#training-procedure) and
@@ -213,7 +213,7 @@ the display is disabled or unplugged, or before a mode change.
 `train` is not cancel-safe. Dropping its future — losing a `select!` against a
 hot-unplug event, or hitting a `timeout` — stops training wherever it is, and a dropped
 future cannot run LTS:L: the sink may be left configured for an FRL rate and the PHY
-driving training patterns. After dropping one, return both ends to TMDS yourself:
+driving training patterns. After dropping one, turn FRL off at both ends yourself:
 
 ```rust,ignore
 select! {
@@ -231,7 +231,7 @@ sets `FLT_no_timeout` (compliance testing), with the link held for the test equi
 
 For a wall-clock deadline, or to stop on a signal without dropping the future, fail one
 polled `ScdcClient` read with an error of your own and let every later call through:
-training stops, LTS:L returns both ends to TMDS, and `train` returns
+training stops, LTS:L turns FRL off at both ends, and `train` returns
 `TrainingError::Scdc` with your error. Never fail a read made after LTS:L has begun
 (after a `write_frl_config` with `HdmiForumFrl::NotSupported`), until a
 `write_frl_config` with an FRL rate starts training again. LTS:L is skipped with

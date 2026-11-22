@@ -48,7 +48,7 @@ Async transports implement this trait; sync transports implement `plumbob::ScdcC
 `ScdcClient`'s `Send` twin: the same operations, each returning a future that is `Send`,
 with a `Send` error. Every `SendScdcClient` is an `ScdcClient` through a blanket
 implementation; a type implements one of the two. Implement it, with hdmi-hal-async's
-`SendHdmiPhy`, to spawn training on a multi-threaded executor from generic code.
+`SendFrlPhy`, to spawn training on a multi-threaded executor from generic code.
 
 ### `FrlTrainer<C, P>`
 
@@ -57,7 +57,7 @@ The same shape as `plumbob::FrlTrainer<C, P>`, with different trait bounds:
 |                  | plumbob                  | plumbob-async                  |
 |------------------|--------------------------|--------------------------------|
 | `C` bound        | `plumbob::ScdcClient`    | `plumbob_async::ScdcClient`    |
-| `P` bound        | `hdmi_hal::phy::HdmiPhy` | `hdmi_hal_async::phy::HdmiPhy` |
+| `P` bound        | `hdmi_hal::phy::FrlPhy` | `hdmi_hal_async::phy::FrlPhy` |
 | Training methods | `fn`                     | `async fn`                     |
 | State machine    | `plumbob::lts::run`      | `plumbob::lts::run`            |
 
@@ -70,9 +70,9 @@ async; the training methods and `exit_to_tmds` are.
 
 These are `plumbob`'s types, re-exported unchanged:
 
-- **`FallbackRequired { reason }`** — no listed rate trained; `reason` says why, and the
-  sink and PHY are back in TMDS. A normal protocol outcome; the caller decides what to do
-  next.
+- **`FallbackRequired { reason }`** — no listed rate trained; `reason` says why; the sink
+  is back in TMDS and the PHY's FRL is off. A normal protocol outcome; the caller decides
+  what to do next.
 - **`NoTimeoutHold { rate }`** — the sink is under compliance test (`FLT_no_timeout`) and
   the poll cap ran out; the link is left as it is for the test equipment.
 - **`TrainingError::Scdc { error, exit }` / `TrainingError::Phy { error, exit }`** — a
